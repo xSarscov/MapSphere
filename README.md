@@ -36,7 +36,11 @@ This project integrates Google Maps with WebGL to display custom map features. B
    ```bash
    npm run dev
    ```
+or you can try with
 
+   ```bash
+   npm run dev -- --host
+   ```
 2. Open your browser and navigate to:
 
    ```bash

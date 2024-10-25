@@ -1,7 +1,22 @@
 html,
-body,
-#app {
+body {
     height: 100%;
     margin: 0;
     padding: 0;
+}
+
+#app {
+    height: 100%;
+    box-sizing: border-box; 
+    position: relative;
+}
+
+#VRButton {
+    z-index: 10000 !important;
+}
+
+
+
+#mapDiv {
+    height: 100%;
 }

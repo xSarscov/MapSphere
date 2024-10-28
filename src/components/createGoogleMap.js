@@ -42,7 +42,7 @@ function initWebGLOverlayView(map) {
         scene = new THREE.Scene();
         camera = initCamera(scene);
         loader = new GLTFLoader();
-        const source = "/src/models/character/character.gltf";
+        const source = "./src/models/character/character.gltf";
 
         loader.load(source, gltf => {
             model = gltf.scene;

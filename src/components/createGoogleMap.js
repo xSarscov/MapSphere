@@ -1,133 +1,139 @@
 import { Loader } from '@googlemaps/js-api-loader';
-import * as THREE from 'three'; 
+import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { getEnvVariables } from '../helpers/getEnvVariables';
-import { VRButton } from 'three/addons/webxr/VRButton.js';
-
+import { initCamera, updateCamera } from './camera';
+import { handleMovement, stopMovement, updateModelPosition } from './movement';
 
 const { VITE_GOOGLE_MAPS_API_KEY, VITE_GOOGLE_MAPS_MAP_ID } = getEnvVariables();
-
 const apiOptions = {
-  apiKey: VITE_GOOGLE_MAPS_API_KEY,
-  version: "beta"
+    apiKey: VITE_GOOGLE_MAPS_API_KEY,
+    version: "beta"
 };
-
-let renderer, xrSession = null;
-
-async function startXR() {
-  if (navigator.xr) {
-    const isSupported = await navigator.xr.isSessionSupported('immersive-vr');
-    
-    if (isSupported) {
-      xrSession = await navigator.xr.requestSession('immersive-vr', {
-        requiredFeatures: ['local-floor', 'bounded-floor']
-      });
-
-      renderer.xr.setSession(xrSession);
-    } else {
-      console.warn("XR no soportado en este dispositivo");
-    }
-  } else {
-    console.warn("XR no está disponible en este navegador");
-  }
-}
-
-async function setupVRButton() {
-  const vrButton = VRButton.createButton(renderer);
-  vrButton.onclick =  () => startXR()
-  document.body.appendChild(vrButton);
-
-  
-}
-
 const mapOptions = {
-  "tilt": 0,
-  "heading": 0,
-  "zoom": 18,
-  "center": { lat: 40.712573, lng: -74.006186 },
-  "mapId": VITE_GOOGLE_MAPS_MAP_ID,
+    "tilt": 67.5,
+    "heading": 0,
+    "zoom": 21,
+    "center": { lat: 39.9012, lng: -0.3431 },
+    "mapId": VITE_GOOGLE_MAPS_MAP_ID,
+    disableDefaultUI: true,
+    keyboardShortcuts: false,
 };
 
 async function initMap() {
-  const mapDiv = document.getElementById("app");
-
-  const apiLoader = new Loader(apiOptions);
-  await apiLoader.load();
-  return new google.maps.Map(mapDiv, mapOptions);
+    const mapDiv = document.getElementById("app");
+    const apiLoader = new Loader(apiOptions);
+    await apiLoader.load();
+    return new google.maps.Map(mapDiv, mapOptions);
 }
 
 function initWebGLOverlayView(map) {
-  let scene, camera, loader;
-  const webGLOverlayView = new google.maps.WebGLOverlayView();
+    let scene, camera, loader, model, renderer, lastMouseX = 0, lastMouseY = 0;
+    const webGLOverlayView = new google.maps.WebGLOverlayView();
+    const speed = 0.8; 
+    let moveForward = false,
+        moveBackward = false,
+        moveLeft = false,
+        moveRight = false;
+    let lastTime = 0;
+    let mixer; 
 
-  webGLOverlayView.onAdd = () => {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera();
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
-    scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.25);
-    directionalLight.position.set(0.5, -1, 0.5);
-    scene.add(directionalLight);
+    webGLOverlayView.onAdd = () => {
+        scene = new THREE.Scene();
+        camera = initCamera(scene);
+        loader = new GLTFLoader();
+        const source = "/src/models/character/character.gltf";
 
-    loader = new GLTFLoader();
-    const source = "pin.gltf";
-    loader.load(source, gltf => {
-      gltf.scene.scale.set(25, 25, 25);
-      gltf.scene.rotation.x = Math.PI;
-      scene.add(gltf.scene);
-    });
-  };
+        loader.load(source, gltf => {
+            model = gltf.scene;
+            model.scale.set(9, 9, 9);
+            model.rotation.x = Math.PI / 2;
+            model.position.set(0, 0, -9);
+            scene.add(model);
+            mixer = new THREE.AnimationMixer(model);
 
-  webGLOverlayView.onContextRestored = ({ gl }) => {
-    renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      canvas: gl.canvas,
-      context: gl,
-      ...gl.getContextAttributes(),
-    });
-    renderer.xr.enabled = true;
-    renderer.autoClear = false;
-
-    setupVRButton();
-
-    loader.manager.onLoad = () => {
-      renderer.setAnimationLoop(() => {
-        map.moveCamera({
-          "tilt": mapOptions.tilt,
-          "heading": mapOptions.heading,
-          "zoom": mapOptions.zoom,
+            gltf.animations.forEach((clip) => {
+                mixer.clipAction(clip).play();
+            });
         });
 
-        if (mapOptions.tilt < 67.5) {
-          mapOptions.tilt += 0.5;
-        } else if (mapOptions.heading <= 360) {
-          mapOptions.heading += 0.2;
-        } else {
-          renderer.setAnimationLoop(null);
-        }
-      });
+        document.addEventListener('keydown', (event) => {
+            const moves = handleMovement(event, moveForward, moveBackward, moveLeft, moveRight);
+            moveForward = moves.moveForward;
+            moveBackward = moves.moveBackward;
+            moveLeft = moves.moveLeft;
+            moveRight = moves.moveRight;
+        });
+
+        document.addEventListener('keyup', (event) => {
+            const moves = stopMovement(event, moveForward, moveBackward, moveLeft, moveRight);
+            moveForward = moves.moveForward;
+            moveBackward = moves.moveBackward;
+            moveLeft = moves.moveLeft;
+            moveRight = moves.moveRight;
+        });
+
+        document.addEventListener('mousemove', onMouseMove);
     };
-  };
 
-  webGLOverlayView.onDraw = ({ gl, transformer }) => {
-    const latLngAltitudeLiteral = {
-      lat: mapOptions.center.lat,
-      lng: mapOptions.center.lng,
-      altitude: 120
+    function onMouseMove(event) {
+        const mouseX = event.clientX;
+        const mouseY = event.clientY; 
+        const deltaX = mouseX - lastMouseX;
+        const deltaY = -mouseY + lastMouseY;
+
+        lastMouseX = mouseX;
+        lastMouseY = mouseY;
+
+        const sensitivity = 0.5;
+        const newHeading = map.heading + (deltaX * sensitivity);
+        const newTilt = map.tilt + (deltaY * 0.7);
+
+        map.moveCamera({
+            heading: newHeading,
+            tilt: newTilt
+        });
+    }
+
+    webGLOverlayView.onContextRestored = ({ gl }) => {
+        renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            canvas: gl.canvas,
+            context: gl,
+            ...gl.getContextAttributes(),
+        });
+        renderer.autoClear = false;
+
+        loader.manager.onLoad = () => {
+            renderer.setAnimationLoop((time) => {
+                const delta = (time - lastTime) / 1000;
+                lastTime = time;
+
+                if (mixer) mixer.update(delta);
+                updateModelPosition(model, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions);
+            });
+        };
     };
 
-    const matrix = transformer.fromLatLngAltitude(latLngAltitudeLiteral);
-    camera.projectionMatrix = new THREE.Matrix4().fromArray(matrix);
+    webGLOverlayView.onDraw = ({ gl, transformer }) => {
+        const latLngAltitudeLiteral = {
+            lat: mapOptions.center.lat,
+            lng: mapOptions.center.lng,
+            altitude: 10
+        };
+        
+        const matrix = transformer.fromLatLngAltitude(latLngAltitudeLiteral);
+        updateCamera(matrix, camera);
 
-    webGLOverlayView.requestRedraw();
-    renderer.render(scene, camera);
-    renderer.resetState();
-  };
+        webGLOverlayView.requestRedraw();
+        renderer.render(scene, camera);
+        renderer.resetState();
+    };
 
-  webGLOverlayView.setMap(map);
+    webGLOverlayView.setMap(map);
 }
 
 export const createGoogleMap = async () => {
-  const map = await initMap();
-  initWebGLOverlayView(map);
+    const map = await initMap();
+    initWebGLOverlayView(map);
 };

@@ -9,13 +9,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^1.1.0",
     "vite": "^5.4.1"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.8",
-    "@iwer/devui": "^0.1.1",
-    "iwer": "^1.0.4",
-    "three": "^0.169.0",
-    "webxr-polyfill": "^2.0.3"
+    "three": "^0.169.0"
   }
 }

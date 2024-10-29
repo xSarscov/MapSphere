@@ -12,8 +12,8 @@ This project integrates Google Maps with WebGL to display custom map features. B
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/xSarscov/3d-google-maps-to-vr.git
-   cd 3d-google-maps-to-vr
+   git clone https://github.com/xSarscov/3d-google-maps-adventure.git
+   cd 3d-google-maps-adventure
    ```
 
 2. Install the dependencies:

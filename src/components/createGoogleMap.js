@@ -14,7 +14,7 @@ const mapOptions = {
     "tilt": 67.5,
     "heading": 0,
     "zoom": 21,
-    "center": { lat: 39.9012, lng: -0.3431 },
+    "center": { lat: 40.712573, lng: -74.006186 },
     "mapId": VITE_GOOGLE_MAPS_MAP_ID,
     disableDefaultUI: true,
     keyboardShortcuts: false,

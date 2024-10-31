@@ -2,11 +2,15 @@ import * as THREE from 'three';
 
 export function initCamera(scene) {
     const camera = new THREE.PerspectiveCamera();
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
     scene.add(ambientLight);
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.25);
-    directionalLight.position.set(0.5, -1, 0.5);
+    const directionalLight = new THREE.DirectionalLight('white', 1);
+    directionalLight.position.set(0, 0, 15);
+   
+
     scene.add(directionalLight);
+
     return camera;
 }
 

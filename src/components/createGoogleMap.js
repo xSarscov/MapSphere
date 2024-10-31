@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { getEnvVariables } from '../helpers/getEnvVariables';
 import { initCamera, updateCamera } from './camera';
-import { handleMovement, stopMovement, updateModelPosition } from './movement';
+import { handleMovement, stopMovement, updateCharacterPosition } from './movement';
+import { generateCoins } from './coinGeneration';
 
 const { VITE_GOOGLE_MAPS_API_KEY, VITE_GOOGLE_MAPS_MAP_ID } = getEnvVariables();
 const apiOptions = {
@@ -28,7 +29,7 @@ async function initMap() {
 }
 
 function initWebGLOverlayView(map) {
-    let scene, camera, loader, model, renderer, lastMouseX = 0, lastMouseY = 0;
+    let scene, camera, loader, character, coins=[], renderer, lastMouseX = 0, lastMouseY = 0;
     const webGLOverlayView = new google.maps.WebGLOverlayView();
     const speed = 0.8; 
     let moveForward = false,
@@ -37,25 +38,43 @@ function initWebGLOverlayView(map) {
         moveRight = false;
     let lastTime = 0;
     let mixer; 
+    let lockCamera = false;
+    let coinsGenerated = false;  
+    let transformerGlobal = null;
 
     webGLOverlayView.onAdd = () => {
         scene = new THREE.Scene();
         camera = initCamera(scene);
         loader = new GLTFLoader();
-        const source = "/models/character/character.gltf";
+        const characterPath = "/models/character/character.gltf";
+        const coinPath = "/models/coin/coin.gltf";
 
-        loader.load(source, gltf => {
-            model = gltf.scene;
-            model.scale.set(9, 9, 9);
-            model.rotation.x = Math.PI / 2;
-            model.position.set(0, 0, -9);
-            scene.add(model);
-            mixer = new THREE.AnimationMixer(model);
+        loader.load(characterPath, gltf => {
+            character = gltf.scene;
+            character.scale.set(9, 9, 9);
+            character.rotation.x = Math.PI / 2;
+            character.position.set(0, 0, -15);
+            scene.add(character);
+            
+            mixer = new THREE.AnimationMixer(character);
 
             gltf.animations.forEach((clip) => {
                 mixer.clipAction(clip).play();
             });
         });
+
+        coins = generateCoins(scene);
+        
+        
+        // loader.load(coinPath, gltf => {
+        //     coin = gltf.scene;
+        //     coin.scale.set(3, 3, 3);
+        //     coin.rotation.x = Math.PI / 3;
+        //     coin.position.set(0, 0, 10);
+        //     scene.add(coin);
+
+            
+        // });
 
         document.addEventListener('keydown', (event) => {
             const moves = handleMovement(event, moveForward, moveBackward, moveLeft, moveRight);
@@ -73,7 +92,18 @@ function initWebGLOverlayView(map) {
             moveRight = moves.moveRight;
         });
 
-        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('keydown', (event) => {
+            if (event.altKey) {
+                lockCamera = !lockCamera;
+                if (lockCamera) {
+                    document.addEventListener('mousemove', onMouseMove);
+                } else {
+                    document.removeEventListener('mousemove', onMouseMove);
+                }
+            }
+        })
+
+        
     };
 
     function onMouseMove(event) {
@@ -96,6 +126,7 @@ function initWebGLOverlayView(map) {
     }
 
     webGLOverlayView.onContextRestored = ({ gl }) => {
+        console.log(gl)
         renderer = new THREE.WebGLRenderer({
             antialias: true,
             canvas: gl.canvas,
@@ -103,6 +134,8 @@ function initWebGLOverlayView(map) {
             ...gl.getContextAttributes(),
         });
         renderer.autoClear = false;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         loader.manager.onLoad = () => {
             renderer.setAnimationLoop((time) => {
@@ -110,18 +143,22 @@ function initWebGLOverlayView(map) {
                 lastTime = time;
 
                 if (mixer) mixer.update(delta);
-                updateModelPosition(model, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions);
+                updateCharacterPosition(character, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera);
+                coins.forEach(coin => {
+                    coin.rotation.z += 0.05; 
+                })
             });
         };
+
     };
 
     webGLOverlayView.onDraw = ({ gl, transformer }) => {
+
         const latLngAltitudeLiteral = {
             lat: mapOptions.center.lat,
             lng: mapOptions.center.lng,
             altitude: 10
         };
-        
         const matrix = transformer.fromLatLngAltitude(latLngAltitudeLiteral);
         updateCamera(matrix, camera);
 

@@ -20,7 +20,7 @@ export function stopMovement(event, moveForward, moveBackward, moveLeft, moveRig
     return { moveForward, moveBackward, moveLeft, moveRight };
 }
 
-export function updateModelPosition(model, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions) {
+export function updateCharacterPosition(character, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera) {
     const headingRadians = (map.heading * Math.PI) / 180;
     const forwardVector = new THREE.Vector3(Math.sin(headingRadians), Math.cos(headingRadians), 0);
     const sideVector = new THREE.Vector3(Math.cos(headingRadians), -Math.sin(headingRadians), 0);
@@ -47,19 +47,22 @@ export function updateModelPosition(model, map, moveForward, moveBackward, moveL
 
     if (deltaX !== 0 || deltaY !== 0) {
         const angle = Math.atan2(deltaY, deltaX);
-        model.rotation.y = angle + Math.PI / 2;
+        character.rotation.y = angle + Math.PI / 2;
     }
 
-    model.position.x += deltaX;
-    model.position.y += deltaY;
+    character.position.x += deltaX;
+    character.position.y += deltaY;
 
-    const { lat, lng } = modelPositionToLatLng(model.position, mapOptions);
-    map.setCenter({ lat, lng });
+    if (lockCamera) {
+        const { lat, lng } = characterPositionToLatLng(character.position, mapOptions);
+        map.setCenter({ lat, lng });
+    }
+
 }
 
-function modelPositionToLatLng(modelPosition, mapOptions) {
+function characterPositionToLatLng(characterPosition, mapOptions) {
     const factor = 0.000009;  
-    const lat = +(mapOptions.center.lat + modelPosition.y * factor).toFixed(6); 
-    const lng = +(mapOptions.center.lng + modelPosition.x * 0.0000117);
+    const lat = +(mapOptions.center.lat + characterPosition.y * factor).toFixed(6); 
+    const lng = +(mapOptions.center.lng + characterPosition.x * 0.0000117);
     return { lat, lng };
 }

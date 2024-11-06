@@ -5,6 +5,7 @@ import { getEnvVariables } from '../helpers/getEnvVariables';
 import { initCamera, updateCamera } from './camera';
 import { handleMovement, stopMovement, updateCharacterPosition } from './movement';
 import { generateCoins } from './coinGeneration';
+import { detectCoinCollisions, initializeScore } from './coinCollection';
 
 const { VITE_GOOGLE_MAPS_API_KEY, VITE_GOOGLE_MAPS_MAP_ID } = getEnvVariables();
 const apiOptions = {
@@ -39,8 +40,7 @@ function initWebGLOverlayView(map) {
     let lastTime = 0;
     let mixer; 
     let lockCamera = false;
-    let coinsGenerated = false;  
-    let transformerGlobal = null;
+    let currentScore = initializeScore();
 
     webGLOverlayView.onAdd = () => {
         scene = new THREE.Scene();
@@ -146,7 +146,8 @@ function initWebGLOverlayView(map) {
                 updateCharacterPosition(character, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera);
                 coins.forEach(coin => {
                     coin.rotation.z += 0.05; 
-                })
+                });
+                currentScore = detectCoinCollisions(character, coins, currentScore, scene);
             });
         };
 

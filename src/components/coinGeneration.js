@@ -1,4 +1,3 @@
-// coinGeneration.js
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export const generateCoins = (scene, numCoins = 80) => {

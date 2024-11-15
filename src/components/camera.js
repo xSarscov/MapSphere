@@ -7,8 +7,6 @@ export function initCamera(scene) {
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight('white', 1);
     directionalLight.position.set(0, 0, 15);
-   
-
     scene.add(directionalLight);
 
     return camera;

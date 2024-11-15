@@ -40,18 +40,53 @@ const mapOptions = {
     keyboardShortcuts: false,
 };
 
-async function getGuideResponse(userMessage) {
-    try {
+function leerTextoEnVoz(texto) {
+    
+        const speech = new SpeechSynthesisUtterance(texto);
+        speech.lang = "es-ES"
+        speechSynthesis.speak(speech);
         
+  }
+
+const prompt = `
+  Eres un guía turístico experto en Google Maps 3D, diseñado para ayudar a los usuarios a explorar y comprender lugares alrededor del mundo. Tu objetivo principal es ofrecer información precisa, atractiva y útil sobre los lugares cercanos o cualquier ubicación especificada. Siempre debes:
+  
+  1. Analizar las coordenadas proporcionadas para identificar la ubicación actual del usuario.
+  2. Ofrecer descripciones interesantes sobre los lugares, atracciones, cultura, historia, y cualquier detalle relevante cerca de esas coordenadas.
+  3. Responder de forma profesional, clara y entretenida, adaptándote al contexto del usuario.
+  4. Si el usuario hace preguntas específicas, enfócate en dar detalles relevantes para esa ubicación.
+  5. Si no hay suficiente información para las coordenadas, sugiere lugares populares cercanos o posibles actividades que el usuario pueda disfrutar.
+  6. Evita responder de forma genérica. Siempre personaliza tus respuestas en función de la ubicación actual o la pregunta del usuario.
+  
+  Ejemplo de interacción:
+  Usuario: ¿Qué hay de interesante cerca?
+  Coordenadas: {lat: 40.7128, lng: -74.0060} (Nueva York, Estados Unidos)
+  Respuesta: "Te encuentras en el corazón de Nueva York, conocido como la Gran Manzana. Cerca de tu ubicación tienes el icónico Times Square, el Empire State Building y Central Park. Además, puedes explorar museos como el MET o disfrutar de un paseo por el puente de Brooklyn."
+  
+  Usuario: Dame detalles sobre la cultura en este lugar.
+  Coordenadas: {lat: 48.8566, lng: 2.3522} (París, Francia)
+  Respuesta: "París, la ciudad del amor, es un epicentro cultural. Aquí encontrarás una mezcla de arquitectura histórica, como la Catedral de Notre Dame, y arte de clase mundial en el Museo del Louvre. Es famosa por su gastronomía, con cafés icónicos y boulangeries donde puedes probar croissants auténticos."
+  
+  Usa este formato para todas tus respuestas. ¿Qué puedo ayudarte a explorar?
+`;
+
+
+async function getGuideResponse(userMessage, map) {
+    try {
+
         const chatSession = model.startChat({
             generationConfig,
             history: [
+                
             ],
         });
-        
-        const result = await chatSession.sendMessage(userMessage);
 
-        console.log(result.response.text())
+        // Envía el mensaje al modelo
+        const result = await chatSession.sendMessage(`${userMessage}\nCoordenadas: ${JSON.stringify(map.center)}`);
+
+
+        console.log(result.response.text());
+        return result.response.text();
     } catch (error) {
         console.error("Error obteniendo respuesta del guía:", error);
         return "Lo siento, hubo un problema obteniendo la respuesta.";
@@ -60,6 +95,7 @@ async function getGuideResponse(userMessage) {
 
 async function initMap() {
     const mapDiv = document.getElementById("app");
+    
     const apiLoader = new Loader(apiOptions);
     await apiLoader.load();
     return new google.maps.Map(mapDiv, mapOptions);
@@ -74,12 +110,11 @@ function initWebGLOverlayView(map) {
         moveLeft = false,
         moveRight = false;
     let lastTime = 0;
-    let mixer; 
+    let characterMixer, robotMixer; 
     let lockCamera = false;
     let currentScore = initializeScore();
     let isInputFocused = false;
-    const chatInput = document.getElementById('userInput');
-    
+    const chatInput = document.getElementById('input-search');
     
 
     webGLOverlayView.onAdd = () => {
@@ -87,7 +122,7 @@ function initWebGLOverlayView(map) {
         camera = initCamera(scene);
         loader = new GLTFLoader();
         const characterPath = "/models/character/character.gltf";
-        const robotPath = "/models/robot/robot.gltf";
+        const robotPath = "/models/robot3/robot3.gltf";
 
         loader.load(characterPath, gltf => {
             character = gltf.scene;
@@ -96,10 +131,10 @@ function initWebGLOverlayView(map) {
             character.position.set(0, 0, -15);
             scene.add(character);
             
-            mixer = new THREE.AnimationMixer(character);
+            characterMixer = new THREE.AnimationMixer(character);
 
             gltf.animations.forEach((clip) => {
-                mixer.clipAction(clip).play();
+                characterMixer.clipAction(clip).play();
             });
 
 
@@ -107,11 +142,42 @@ function initWebGLOverlayView(map) {
 
         loader.load(robotPath, gltf => {
             robot = gltf.scene;
-            robot.scale.set(.2,.2,.2);
+            robot.scale.set(1,1,1);
             robot.rotation.x = Math.PI / 2;
-            robot.rotation.y = - Math.PI / 2;
-            robot.position.set(0, 0, 3);
+            robot.rotation.y = -Math.PI / 180;
+            robot.position.set(-6, -1, -5);
             scene.add(robot);
+
+            
+
+            robotMixer = new THREE.AnimationMixer(robot);
+
+            gltf.animations.forEach((clip) => {
+                robotMixer.clipAction(clip).play();
+                
+            });
+
+            if (annyang) {
+                annyang.addCommands({
+                  'hey cheese *texto': async(texto) => {
+                    const response = await getGuideResponse(texto, map);
+                    console.log('Texto:', texto);
+                    console.log("Gemini: ", response);
+                    leerTextoEnVoz(response);
+
+                  },
+            
+                });
+            
+                annyang.setLanguage('es-ES');
+               
+                SpeechKITT.annyang();
+               
+                SpeechKITT.setStylesheet('//cdnjs.cloudflare.com/ajax/libs/SpeechKITT/0.3.0/themes/flat.css');
+               
+                SpeechKITT.vroom();
+
+            }
         });
         
         coins = generateCoins(scene);
@@ -175,7 +241,8 @@ function initWebGLOverlayView(map) {
             if (event.key === "Enter") {
                 const userMessage = event.target.value;
                 if (userMessage) {
-                    const response = await getGuideResponse(userMessage);
+                    const response = await getGuideResponse(userMessage, map);
+                    leerTextoEnVoz(response);
                     console.log(response)
                     event.target.value = "";
                 }
@@ -213,20 +280,23 @@ function initWebGLOverlayView(map) {
             ...gl.getContextAttributes(),
         });
         renderer.autoClear = false;
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         loader.manager.onLoad = () => {
             renderer.setAnimationLoop((time) => {
                 const delta = (time - lastTime) / 1000;
                 lastTime = time;
 
-                if (mixer) mixer.update(delta);
+                if (characterMixer) characterMixer.update(delta);
+                if (robotMixer) robotMixer.update(delta);
+
                 updateCharacterPosition(character, robot, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera);
+                
                 coins.forEach(coin => {
                     coin.rotation.z += 0.05; 
                 });
+
                 currentScore = detectCoinCollisions(character, coins, currentScore, scene);
+
             });
         };
 

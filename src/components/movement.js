@@ -20,7 +20,7 @@ export function stopMovement(event, moveForward, moveBackward, moveLeft, moveRig
     return { moveForward, moveBackward, moveLeft, moveRight };
 }
 
-export function updateCharacterPosition(character, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera) {
+export function updateCharacterPosition(character, robot, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera) {
     const headingRadians = (map.heading * Math.PI) / 180;
     const forwardVector = new THREE.Vector3(Math.sin(headingRadians), Math.cos(headingRadians), 0);
     const sideVector = new THREE.Vector3(Math.cos(headingRadians), -Math.sin(headingRadians), 0);
@@ -48,10 +48,14 @@ export function updateCharacterPosition(character, map, moveForward, moveBackwar
     if (deltaX !== 0 || deltaY !== 0) {
         const angle = Math.atan2(deltaY, deltaX);
         character.rotation.y = angle + Math.PI / 2;
+        robot.rotation.y = angle + Math.PI / 180;
     }
 
     character.position.x += deltaX;
     character.position.y += deltaY;
+    robot.position.x += deltaX;
+    robot.position.y += deltaY;
+
 
     if (lockCamera) {
         const { lat, lng } = characterPositionToLatLng(character.position, mapOptions);

@@ -6,8 +6,26 @@ import { initCamera, updateCamera } from './camera';
 import { handleMovement, stopMovement, updateCharacterPosition } from './movement';
 import { generateCoins } from './coinGeneration';
 import { detectCoinCollisions, initializeScore } from './coinCollection';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
-const { VITE_GOOGLE_MAPS_API_KEY, VITE_GOOGLE_MAPS_MAP_ID } = getEnvVariables();
+const { VITE_GOOGLE_MAPS_API_KEY, VITE_GOOGLE_MAPS_MAP_ID, VITE_GEMINI_API_KEY } = getEnvVariables();
+
+const apiKey = VITE_GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(apiKey);
+const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+});
+
+const generationConfig = {
+    temperature: 1,
+    topP: 0.95,
+    topK: 40,
+    maxOutputTokens: 8192,
+    responseMimeType: "text/plain",
+};
+
+
+
 const apiOptions = {
     apiKey: VITE_GOOGLE_MAPS_API_KEY,
     version: "beta"
@@ -22,6 +40,24 @@ const mapOptions = {
     keyboardShortcuts: false,
 };
 
+async function getGuideResponse(userMessage) {
+    try {
+        
+        const chatSession = model.startChat({
+            generationConfig,
+            history: [
+            ],
+        });
+        
+        const result = await chatSession.sendMessage(userMessage);
+
+        console.log(result.response.text())
+    } catch (error) {
+        console.error("Error obteniendo respuesta del guía:", error);
+        return "Lo siento, hubo un problema obteniendo la respuesta.";
+    }
+}
+
 async function initMap() {
     const mapDiv = document.getElementById("app");
     const apiLoader = new Loader(apiOptions);
@@ -30,7 +66,7 @@ async function initMap() {
 }
 
 function initWebGLOverlayView(map) {
-    let scene, camera, loader, character, coins=[], renderer, lastMouseX = 0, lastMouseY = 0;
+    let scene, camera, loader, character, coins=[], renderer, lastMouseX = 0, lastMouseY = 0, robot;
     const webGLOverlayView = new google.maps.WebGLOverlayView();
     const speed = 0.8; 
     let moveForward = false,
@@ -41,13 +77,17 @@ function initWebGLOverlayView(map) {
     let mixer; 
     let lockCamera = false;
     let currentScore = initializeScore();
+    let isInputFocused = false;
+    const chatInput = document.getElementById('userInput');
+    
+    
 
     webGLOverlayView.onAdd = () => {
         scene = new THREE.Scene();
         camera = initCamera(scene);
         loader = new GLTFLoader();
         const characterPath = "/models/character/character.gltf";
-        const coinPath = "/models/coin/coin.gltf";
+        const robotPath = "/models/robot/robot.gltf";
 
         loader.load(characterPath, gltf => {
             character = gltf.scene;
@@ -61,8 +101,19 @@ function initWebGLOverlayView(map) {
             gltf.animations.forEach((clip) => {
                 mixer.clipAction(clip).play();
             });
+
+
         });
 
+        loader.load(robotPath, gltf => {
+            robot = gltf.scene;
+            robot.scale.set(.2,.2,.2);
+            robot.rotation.x = Math.PI / 2;
+            robot.rotation.y = - Math.PI / 2;
+            robot.position.set(0, 0, 3);
+            scene.add(robot);
+        });
+        
         coins = generateCoins(scene);
         
         
@@ -77,28 +128,56 @@ function initWebGLOverlayView(map) {
         // });
 
         document.addEventListener('keydown', (event) => {
-            const moves = handleMovement(event, moveForward, moveBackward, moveLeft, moveRight);
-            moveForward = moves.moveForward;
-            moveBackward = moves.moveBackward;
-            moveLeft = moves.moveLeft;
-            moveRight = moves.moveRight;
+            if (event.key === '/') {
+                event.preventDefault(); 
+                chatInput.focus();
+            }
         });
-
-        document.addEventListener('keyup', (event) => {
-            const moves = stopMovement(event, moveForward, moveBackward, moveLeft, moveRight);
-            moveForward = moves.moveForward;
-            moveBackward = moves.moveBackward;
-            moveLeft = moves.moveLeft;
-            moveRight = moves.moveRight;
+    
+        chatInput.addEventListener('focus', () => {
+            isInputFocused = true;
         });
-
+    
+        chatInput.addEventListener('blur', () => {
+            isInputFocused = false;
+        });
+    
         document.addEventListener('keydown', (event) => {
+            if (!isInputFocused) {
+                const moves = handleMovement(event, moveForward, moveBackward, moveLeft, moveRight);
+                moveForward = moves.moveForward;
+                moveBackward = moves.moveBackward;
+                moveLeft = moves.moveLeft;
+                moveRight = moves.moveRight;
+            }
+        });
+    
+        document.addEventListener('keyup', (event) => {
+            if (!isInputFocused) {
+                const moves = stopMovement(event, moveForward, moveBackward, moveLeft, moveRight);
+                moveForward = moves.moveForward;
+                moveBackward = moves.moveBackward;
+                moveLeft = moves.moveLeft;
+                moveRight = moves.moveRight;
+            }
+        });
+
+        document.addEventListener('keydown', async(event) => {
             if (event.altKey) {
                 lockCamera = !lockCamera;
                 if (lockCamera) {
                     document.addEventListener('mousemove', onMouseMove);
                 } else {
                     document.removeEventListener('mousemove', onMouseMove);
+                }
+            }
+
+            if (event.key === "Enter") {
+                const userMessage = event.target.value;
+                if (userMessage) {
+                    const response = await getGuideResponse(userMessage);
+                    console.log(response)
+                    event.target.value = "";
                 }
             }
         })
@@ -143,7 +222,7 @@ function initWebGLOverlayView(map) {
                 lastTime = time;
 
                 if (mixer) mixer.update(delta);
-                updateCharacterPosition(character, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera);
+                updateCharacterPosition(character, robot, map, moveForward, moveBackward, moveLeft, moveRight, speed, mapOptions, lockCamera);
                 coins.forEach(coin => {
                     coin.rotation.z += 0.05; 
                 });

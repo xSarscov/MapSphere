@@ -162,7 +162,9 @@ Visit `http://localhost:5173` in your browser to view the project.
 
 3. **3D Models Not Loading**:
    - Verify the path to the `.gltf` models in the `models` folder.
-
+     
+4. **API Request Quotas Exceeded**:
+   - Problem: API requests fail intermittently with errors such as OVER_QUERY_LIMIT.
 ---
 
 ## Possible Improvements

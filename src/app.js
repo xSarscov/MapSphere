@@ -10,7 +10,7 @@ let map, minimap, renderer, scene, camera, character, arrow, characterMixer;
 let minimapDirectionsService, minimapDirectionsRenderer;
 let characterMarker;
 let lastTime = 0;
-let movementSpeed = 0.0001;
+let movementSpeed = 0.00001;
 let keysPressed = {};
 let lastMouseX = 0, lastMouseY = 0;
 let destinationCoordinates = null;

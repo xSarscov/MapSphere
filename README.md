@@ -7,6 +7,10 @@ MapSphere is an advanced, immersive 3D navigation application that integrates Go
 
 ---
 
+> [!IMPORTANT]  
+> MapSphere is designed for desktop computers. The experience may be limited on mobile devices.
+
+
 ## Preview
 
 https://github.com/user-attachments/assets/467072c5-f522-471e-bf4b-0b5783e8a792

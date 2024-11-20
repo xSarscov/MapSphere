@@ -10,7 +10,7 @@ let map, minimap, renderer, scene, camera, character, arrow, characterMixer;
 let minimapDirectionsService, minimapDirectionsRenderer;
 let characterMarker;
 let lastTime = 0;
-let movementSpeed = 0.00001;
+let movementSpeed = 0.0001;
 let keysPressed = {};
 let lastMouseX = 0, lastMouseY = 0;
 let destinationCoordinates = null;
@@ -48,7 +48,7 @@ const mapOptions = {
     tilt: 67.5,
     heading: 0,
     zoom: 19,
-    center: { lat: 40.712573, lng: -74.006186 },
+    center: { lat:  12.1328200, lng: -86.2504000 },
     mapId: "15431d2b469f209e",
     draggable: false,
     disableDefaultUI: true,
@@ -187,7 +187,7 @@ function updateArrowDirection() {
     const dy = destinationCoordinates.lat() - characterPosition.lat;
     const distance = Math.sqrt(dx * dx + dy * dy); 
 
-    if (distance < 0.1) { 
+    if (distance < 0.01) { 
 
         scene.remove(arrow);
         arrow = null;

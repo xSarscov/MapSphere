@@ -7,20 +7,63 @@ body {
   position: relative;
 }
 
-#app {
-  height: 100%;
+#map-container {
+  position: relative;
+}
+
+#map {
+  height: 800px;
+  width: 100%;
   box-sizing: border-box;
+  position: relative;
 }
 
-#mapDiv {
-  height: 100%;
+#place-autocomplete-card {
+
+  background-color: #fff;
+  width: 100%;
+  max-width: 550px;
+  padding: 5px;
+  border-radius: 0px;
+  margin: 5px;
+  
 }
 
-.input-search {
-    position: absolute;
-    z-index: 1001;
-    bottom: 0;
-    left: 50%;
-    margin: 10px 0;
+#controls {
+  
+  display: flex;
+  gap: 5px;
+  width: 100%;
+  max-width: 500px;
+  margin: 5px;
+  height: 40px;
+}
 
+#gemini {
+
+  display: flex;
+  gap: 5px;
+  padding: 5px 10px;
+  max-width: 800px;
+  width: 100%;
+}
+
+#gemini textarea {
+  resize: none;
+  height: auto;
+  max-height: 200px;
+  width: 100%;
+}
+
+#speech-bubble {
+  display: none;
+  padding: 20px;
+  opacity: 1;
+  background: #F8F7F7;
+  border-radius: 20px;
+  margin-top: 50px;
+  font-size: 20px;
+  width: 900px;
+  min-width: 0;
+  color: black;
 }

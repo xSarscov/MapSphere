@@ -1,4 +1,4 @@
-# MapSphere
+# MapSphere 📌
 
 ![image](https://github.com/user-attachments/assets/e0f32e00-f936-4ffe-b45f-ef41c4c81e77)
 
@@ -102,8 +102,8 @@ Before running the project, ensure you have the following:
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/xSarscov/mapsphere.git
-cd mapsphere
+https://github.com/xSarscov/MapSphere.git
+cd MapSphere
 ```
 
 ### 2. Install Dependencies
